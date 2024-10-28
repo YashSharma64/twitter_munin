@@ -4,35 +4,52 @@ from twitter import *
 from pprint import pprint
 import sys
 
-from collections import OrderedDict
-
+# Define OAuth credentials (update these with your keys)
 OAUTH_TOKEN = ''
 OAUTH_SECRET = ''
 CONSUMER_KEY = ''
 CONSUMER_SECRET = ''
 
-t = Twitter(auth=OAuth(OAUTH_TOKEN, OAUTH_SECRET,
-                       CONSUMER_KEY, CONSUMER_SECRET))
+# Initialize Twitter API
+t = Twitter(auth=OAuth(OAUTH_TOKEN, OAUTH_SECRET, CONSUMER_KEY, CONSUMER_SECRET))
+
+# Constants
+TWEET_COUNT = 200
+
+def fetch_user_tweets(screen_name):
+    """Fetches tweets from a user's timeline."""
+    try:
+        return t.statuses.user_timeline(count=TWEET_COUNT, screen_name=screen_name)
+    except Exception as e:
+        print(f"Error fetching tweets: {e}")
+        return []
+
+def calculate_engagement(tweets, username):
+    """Calculates the average favorites and retweets for a user's tweets."""
+    count = 0
+    total_favorites = 0
+    total_retweets = 0
+
+    for tweet in tweets:
+        # Only count tweets by the specified user, excluding retweets
+        if tweet['user']['screen_name'] == username and not tweet['text'].startswith("RT"):
+            count += 1
+            total_favorites += tweet['favorite_count']
+            total_retweets += tweet['retweet_count']
+
+    # Avoid division by zero
+    avg_favorites = total_favorites / count if count > 0 else 0
+    avg_retweets = total_retweets / count if count > 0 else 0
+
+    return avg_favorites, avg_retweets
 
 if __name__ == "__main__":
-
     if len(sys.argv) < 2:
-        print("Wrong number of arguments")
+        print("Usage: python script.py <Twitter_Username>")
     else:
-        name=sys.argv[1]
-        tweets = t.statuses.user_timeline(count=200,screen_name=name)
-        count = 0
-        favs = 0
-        retweets = 0
+        username = sys.argv[1]
+        tweets = fetch_user_tweets(username)
+        avg_favs, avg_rts = calculate_engagement(tweets, username)
 
-        for t in tweets:
-            #Only count tweets by me, not retweets
-            if t['user']['screen_name'] == name and t['text'].find("RT") != 0:
-                count += 1
-                favs += t['favorite_count']
-                retweets += t['retweet_count']
-
-        print("favorite.value {}".format(favs/count))
-        print("retweet.value {}".format(retweets/count))
-
-
+        print(f"Average Favorites: {avg_favs:.2f}")
+        print(f"Average Retweets: {avg_rts:.2f}")
